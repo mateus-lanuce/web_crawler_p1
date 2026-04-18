@@ -47,7 +47,7 @@ O cliente que executa o processamento pesado e parseamento.
 
 ### Pré-requisitos
 - Docker & Docker Compose
-- Java 26+ (conforme definido no pom.xml)
+- Java 21+ (conforme definido no pom.xml)
 - Maven (se rodar localmente)
 
 ### Opção A: Rodando com Docker (Recomendado)
@@ -98,7 +98,7 @@ A configuração é feita através do arquivo `config.txt` ou via variáveis de 
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **Java 26**: Core da aplicação.
+- **Java 21**: Core da aplicação.
 - **Maven**: Gerenciamento de dependências.
 - **Docker & Docker Compose**: Orquestração e containerização.
 - **TCP Sockets**: Comunicação inter-processos.
