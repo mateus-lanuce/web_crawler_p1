@@ -1,0 +1,10 @@
+# Configuracao de Rede do Crawler Distribuido
+# Se você rodar em maquinas separadas, basta mudar localhost para o IP da maquina onde o Coordenador ou DataServer estao rodando.
+
+COORD_HOST=localhost
+COORD_PORT=8080
+
+DATA_HOST=localhost
+DATA_PORT=8081
+
+WORKER_THREADS=4

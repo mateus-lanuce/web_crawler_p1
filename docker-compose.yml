@@ -1,0 +1,68 @@
+# CONFIGURAÇÃO DISTRIBUÍDA:
+# 1. No PC Master (onde fica o DataServer/Coordenador):
+#    Rode: docker-compose up --build data-server coordinator
+# 2. Nos PCs Workers:
+#    - Mude DATA_HOST e COORD_HOST para o IP do PC Master (ex: 192.168.1.50)
+#    - Comente ou remova a seção 'depends_on'
+#    - Rode: docker-compose up --build worker-1 worker-2
+
+services:
+  data-server:
+    build: .
+    environment:
+      - ROLE=DATA_SERVER
+      - DATA_PORT=8081 # Mude se quiser rodar em outra porta
+    ports:
+      - "8081:8081"
+    networks:
+      - crawler_net
+    volumes:
+      - ./mock_internet.csv:/app/mock_internet.csv
+
+  coordinator:
+    build: .
+    environment:
+      - ROLE=COORDINATOR
+      - COORD_PORT=8080 # Mude se quiser rodar em outra porta
+    ports:
+      - "8080:8080"
+    networks:
+      - crawler_net
+
+  worker-1:
+    build: .
+    environment:
+      - ROLE=WORKER
+      - DATA_HOST=data-server # Mude para o IP do PC Master se rodar em máquinas separadas
+      - DATA_PORT=8081
+      - COORD_HOST=coordinator # Mude para o IP do PC Master se rodar em máquinas separadas
+      - COORD_PORT=8080
+      - WORKER_THREADS=4
+    depends_on:
+      - data-server
+      - coordinator
+    networks:
+      - crawler_net
+    deploy:
+      replicas: 2
+
+  worker-2:
+    build: .
+    environment:
+      - ROLE=WORKER
+      - DATA_HOST=data-server # Mude para o IP do PC Master se rodar em máquinas separadas
+      - DATA_PORT=8081
+      - COORD_HOST=coordinator # Mude para o IP do PC Master se rodar em máquinas separadas
+      - COORD_PORT=8080
+      - WORKER_THREADS=8
+    depends_on:
+      - data-server
+      - coordinator
+    networks:
+      - crawler_net
+    deploy:
+      replicas: 2
+
+networks:
+  crawler_net:
+    driver: bridge
