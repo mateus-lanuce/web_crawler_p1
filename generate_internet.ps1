@@ -15,10 +15,15 @@ Write-Host "Gerando 1.000 páginas com 1.000 links cada..."
 
 $results = 1..$count | ForEach-Object {
     $i = $_
-    # Seleciona uma categoria aleatória
-    $cat = $categories[(Get-Random -Maximum $categories.Count)]
+    # Seleciona de 1 a 3 categorias aleatórias para criar páginas multi-temáticas
+    $numCats = Get-Random -Minimum 1 -Maximum 4
+    $selectedCats = $categories | Get-Random -Count $numCats
+    
+    $catNames = ($selectedCats.name) -join " e "
+    $catKeywords = ($selectedCats.keywords) -join ", "
+    
     $pageName = "page$i.com"
-    $text = "Esta e a pagina $i sobre $($cat.name). Focada em: $($cat.keywords)."
+    $text = "Esta e a pagina $i sobre $catNames. Focada em: $catKeywords."
     
     # Embaralha a lista global de 1.000 páginas para esta linha específica
     $shuffledLinks = $allPages | Get-Random -Count $count

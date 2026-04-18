@@ -28,6 +28,8 @@ services:
       - "8080:8080"
     networks:
       - crawler_net
+    volumes:
+      - ./coordinator.log:/app/coordinator.log
 
   worker-1:
     build: .

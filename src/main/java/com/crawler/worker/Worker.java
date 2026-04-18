@@ -143,10 +143,9 @@ public class Worker {
                         .filter(isNotSelfRef)
                         .collect(Collectors.toList());
 
-                // Classificacao usando Predicate no texto da página
-                Predicate<String> isSports = t -> t.toLowerCase().contains("esporte")
-                        || t.toLowerCase().contains("futebol") || t.toLowerCase().contains("basquete");
-                String category = isSports.test(textStr) ? "ESPORTES" : "GERAL";
+                // Classificacao usando Predicates e Streams no texto da página
+                // Categorias expandidas conforme o script de geracao de dados
+                String category = classifyCategory(textStr);
 
                 String foundLinksStr = String.join(",", validLinks);
                 String msg = Protocol.FOUND_CMD + " " + foundLinksStr + " FROM " + url + " CATEGORY " + category;
@@ -172,6 +171,29 @@ public class Worker {
             } catch (IOException e) {
             }
         }
+    }
+
+    private String classifyCategory(String text) {
+        if (text == null || text.isEmpty()) return "GERAL";
+        String t = text.toLowerCase();
+
+        // Mapeamento de categorias e suas palavras-chave (conforme generate_internet.ps1)
+        java.util.Map<String, List<String>> categories = java.util.Map.of(
+            "ESPORTE", List.of("esporte", "futebol", "basquete", "corrida", "olimpiadas", "treinos"),
+            "TECNOLOGIA", List.of("programacao", "inteligencia artificial", "hardware", "gadgets", "software"),
+            "CULINARIA", List.of("receitas", "gastronomia", "temperos", "sobremesas", "chefs"),
+            "NOTICIAS", List.of("politica", "economia", "mundo", "cotidiano", "reportagens"),
+            "VIAGENS", List.of("destinos", "passagens", "hoteis", "roteiros", "mochilao"),
+            "CIENCIA", List.of("astronomia", "fisica", "biologia", "quimica", "experimentos")
+        );
+
+        // Uso de Streams e Predicates para encontrar TODAS as categorias que combinam
+        String matched = categories.entrySet().stream()
+            .filter(entry -> entry.getValue().stream().anyMatch(t::contains))
+            .map(java.util.Map.Entry::getKey)
+            .collect(Collectors.joining(","));
+
+        return matched.isEmpty() ? "GERAL" : matched;
     }
 
     public static void main(String[] args) {

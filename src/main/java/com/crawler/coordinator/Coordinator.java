@@ -12,11 +12,26 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public class Coordinator {
     private final BlockingQueue<String> urlQueue = new LinkedBlockingQueue<>();
     private final Set<String> visitedUrls = ConcurrentHashMap.newKeySet();
     private final AtomicInteger activeWorkers = new AtomicInteger(0);
+    private static final Logger logger = Logger.getLogger("CrawlerCoordinator");
+
+    static {
+        try {
+            // Overwrite log file on each execution (append = false)
+            FileHandler fh = new FileHandler("coordinator.log", false);
+            fh.setFormatter(new SimpleFormatter());
+            logger.addHandler(fh);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public Coordinator() {
         // Inicializar com uma semente
@@ -24,6 +39,7 @@ public class Coordinator {
         urlQueue.add(seedUrl);
         visitedUrls.add(seedUrl);
         System.out.println("Semente adicionada: " + seedUrl);
+        logger.info("INICIO DO CRAWLER - Semente: " + seedUrl);
     }
 
     public void start() {
@@ -69,6 +85,7 @@ public class Coordinator {
                             } catch (NumberFormatException ignored) {}
                         }
                         System.out.println("Worker " + socket.getInetAddress() + ":" + socket.getPort() + " conectou-se informando capacidade de " + threads + " threads.");
+                        logger.info("Worker conectado [" + socket.getInetAddress() + ":" + socket.getPort() + "] - Capacidade: " + threads + " threads.");
                     } else if (msg.startsWith(Protocol.WORKER_READY)) {
                         String url = null;
 
@@ -86,8 +103,10 @@ public class Coordinator {
                         if (url != null) {
                             activeWorkers.incrementAndGet();
                             out.println(Protocol.TASK_CMD + " " + url);
+                            logger.info("Worker [" + socket.getInetAddress() + ":" + socket.getPort() + "] recebeu link para processar: " + url);
                         } else if (isFinished()) {
                             out.println(Protocol.SHUTDOWN_CMD);
+                            logger.info("Enviando SHUTDOWN para Worker [" + socket.getInetAddress() + ":" + socket.getPort() + "] - Fila vazia.");
                             break;
                         } else {
                             // Se chegou aqui mas nao achou URL, pode tentar de novo depois
@@ -99,20 +118,35 @@ public class Coordinator {
                         // Protocol: FOUND: link1,link2 FROM url CATEGORY category
                         String data = msg.substring(Protocol.FOUND_CMD.length()).trim();
                         int fromIndex = data.indexOf("FROM");
-                        if (fromIndex != -1) {
-                            String linksStr = data.substring(0, fromIndex).trim();
-                            if (!linksStr.isEmpty()) {
-                                String[] urlList = linksStr.split(",");
-                                System.out.println("Adicionando " + urlList.length + " links vindos de " + linksStr.substring(0, Math.min(20, linksStr.length())) + "...");
-                                for (String link : urlList) {
-                                    String trimmed = link.trim();
-                                    if (!trimmed.isEmpty() && visitedUrls.add(trimmed)) {
-                                        urlQueue.add(trimmed);
-                                    }
+                        int categoryIndex = data.indexOf("CATEGORY");
+
+                        String linksStr = "";
+                        String sourceUrl = "desconhecida";
+                        String category = "GERAL";
+
+                        if (fromIndex != -1 && categoryIndex != -1) {
+                            linksStr = data.substring(0, fromIndex).trim();
+                            sourceUrl = data.substring(fromIndex + 4, categoryIndex).trim();
+                            category = data.substring(categoryIndex + 8).trim();
+                        } else if (fromIndex != -1) {
+                            linksStr = data.substring(0, fromIndex).trim();
+                            sourceUrl = data.substring(fromIndex + 4).trim();
+                        }
+
+                        int numLinks = linksStr.isEmpty() ? 0 : linksStr.split(",").length;
+                        logger.info("Retorno do Worker [" + socket.getInetAddress() + ":" + socket.getPort() + "] sobre link: " + sourceUrl + " | Categoria: " + category + " | Novos links encontrados: " + numLinks);
+
+                        if (!linksStr.isEmpty()) {
+                            String[] urlList = linksStr.split(",");
+                            System.out.println("Adicionando " + urlList.length + " links vindos de " + linksStr.substring(0, Math.min(20, linksStr.length())) + "...");
+                            for (String link : urlList) {
+                                String trimmed = link.trim();
+                                if (!trimmed.isEmpty() && visitedUrls.add(trimmed)) {
+                                    urlQueue.add(trimmed);
                                 }
-                            } else {
-                                System.out.println("Nenhum link encontrado na resposta.");
                             }
+                        } else {
+                            System.out.println("Nenhum link encontrado na resposta.");
                         }
                         activeWorkers.decrementAndGet();
                         System.out.println("Processamento concluído. Fila atual: " + urlQueue.size());
