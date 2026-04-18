@@ -1,5 +1,5 @@
 # Build stage
-FROM maven:3.9.6-eclipse-temurin-21-jammy AS build
+FROM maven:3.9.6-eclipse-temurin-26-jammy AS build
 WORKDIR /app
 COPY pom.xml .
 # Dependencias nao sao necessarias nesse pom basico, mas podemos rodar go-offline se tivessemos
@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn clean compile
 
 # Runtime stage
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:26-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/classes /app/classes
 COPY mock_internet.csv .
